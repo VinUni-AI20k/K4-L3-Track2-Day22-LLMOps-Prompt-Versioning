@@ -51,14 +51,14 @@ class PIIDetector(Validator):
     # Regex patterns cho từng loại PII — đã được định nghĩa sẵn, bạn chỉ cần dùng
     PII_PATTERNS = {
         "EMAIL":       r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",
-        "PHONE":       r"\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}\b",
+        "PHONE":       r"(?:\+?1[-.\s]?)?(?:\(\d{3}\)|\b\d{3})[-.\s]\d{3}[-.\s]\d{4}\b",
         "SSN":         r"\b\d{3}-\d{2}-\d{4}\b",
         "CREDIT_CARD": r"\b(?:\d{4}[-\s]?){3}\d{4}\b",
     }
 
     def validate(self, value: str, metadata: dict):
         """
-        Tìm PII trong value; nếu phát hiện, redact và trả về PassResult với text đã xử lý.
+        Tìm PII trong value; nếu phát hiện, trả về FailResult kèm fix_value là text đã redact.
 
         Bước:
           1. Copy value → redacted_text
@@ -66,8 +66,11 @@ class PIIDetector(Validator):
              - Tìm tất cả matches bằng re.findall(pattern, value)
              - Thay thế từng match bằng "[PII_TYPE_REDACTED]" trong redacted_text
              - Ghi lại (pii_type, match) vào found_pii
-          3. Nếu found_pii không rỗng → PassResult(value_override=redacted_text)
-          4. Nếu không tìm thấy PII → PassResult(value_override=value)
+          3. Nếu found_pii không rỗng → FailResult(error_message=..., fix_value=redacted_text)
+          4. Nếu không tìm thấy PII → PassResult()
+
+        ⚠️  Với on_fail=FIX, Guardrails chỉ thay output bằng fix_value của FailResult.
+            PassResult(value_override=...) KHÔNG thay đổi output → PII sẽ không bị che.
         """
         redacted_text = value
         found_pii     = []
@@ -84,10 +87,11 @@ class PIIDetector(Validator):
 
         if found_pii:
             print(f"  ⚠️  Đã redact {len(found_pii)} PII: {[p[0] for p in found_pii]}")
-            # TODO: Trả về PassResult với value_override=redacted_text
+            # TODO: Trả về FailResult với fix_value=redacted_text
+            # Gợi ý: FailResult(error_message="Phát hiện PII", fix_value=redacted_text)
             return ...
 
-        # TODO: Không có PII → trả về PassResult với value gốc
+        # TODO: Không có PII → trả về PassResult()
         return ...
 
 
@@ -136,14 +140,14 @@ class JSONFormatter(Validator):
         Thử parse value thành JSON.
         Nếu thất bại, gọi _repair() rồi thử lại.
 
-        Trả về PassResult với JSON được format đẹp nếu thành công.
-        Trả về FailResult nếu JSON không thể sửa được.
+        Trả về PassResult() nếu JSON đã hợp lệ sẵn.
+        Trả về FailResult(fix_value=JSON đã format đẹp) nếu sửa được.
+        Trả về FailResult(fix_value=JSON dự phòng) nếu không thể sửa.
         """
-        # TODO: Thử parse JSON trực tiếp
+        # TODO: Thử parse JSON trực tiếp — hợp lệ thì PassResult()
         try:
             parsed = ...   # json.loads(value)
-            # TODO: Trả về PassResult với json.dumps(parsed, indent=2)
-            return PassResult(value_override=...)
+            return PassResult()
         except json.JSONDecodeError:
             pass
 
@@ -152,10 +156,13 @@ class JSONFormatter(Validator):
             repaired_text = self._repair(value)
             parsed        = ...   # json.loads(repaired_text)
             print(f"  🔧 JSON đã được sửa thành công")
-            # TODO: Trả về PassResult với json.dumps(parsed, indent=2)
-            return PassResult(value_override=...)
+            # TODO: Trả về FailResult với fix_value=json.dumps(parsed, indent=2)
+            return FailResult(error_message="JSON lỗi, đã tự sửa", fix_value=...)
         except json.JSONDecodeError as e:
-            return FailResult(error_message=f"JSON không hợp lệ sau khi sửa: {e}")
+            # Không sửa được → trả về JSON dự phòng (đã cho sẵn)
+            fallback = json.dumps({"error": "Không thể phân tích JSON", "raw": value[:200]},
+                                  ensure_ascii=False)
+            return FailResult(error_message=f"JSON không hợp lệ sau khi sửa: {e}", fix_value=fallback)
 
 
 # ── 3. Demo: PII Guard ─────────────────────────────────────────────────────

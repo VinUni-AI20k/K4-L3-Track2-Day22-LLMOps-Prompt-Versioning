@@ -38,6 +38,8 @@ from qa_pairs import QA_PAIRS
 
 # ── 1. Prompt Templates (copy từ Bước 2) ──────────────────────────────────
 # TODO: Copy SYSTEM_V1 và SYSTEM_V2 mà bạn đã viết ở file 02_prompt_hub_ab_routing.py
+# ⚠️ BẮT BUỘC kết thúc bằng "\n\nContext:\n{context}" — thiếu {context} thì LLM không nhận tài liệu
+#    mà chương trình vẫn chạy bình thường (faithfulness ở Bước 3 sẽ tụt).
 SYSTEM_V1 = ...
 PROMPT_V1 = ChatPromptTemplate.from_messages([
     ("system", SYSTEM_V1),
@@ -220,7 +222,7 @@ def main():
     print("=" * 65)
     for metric in ["faithfulness", "answer_relevancy", "context_recall", "context_precision"]:
         s1, s2  = v1_scores[metric], v2_scores[metric]
-        winner  = "← V1" if s1 > s2 else "← V2"
+        winner  = "← V1" if s1 > s2 else "← V2" if s2 > s1 else "="
         print(f"  {metric:30s}  {s1:>8.4f}  {s2:>8.4f}  {winner}")
 
     # Kiểm tra mục tiêu

@@ -9,6 +9,7 @@ NHIỆM VỤ:
 
 DELIVERABLE: Mở https://smith.langchain.com → project của bạn → xác nhận ≥ 50 traces.
 """
+import os
 import sys
 from pathlib import Path
 
@@ -129,8 +130,9 @@ def main():
         print(f"[{i:02d}/{len(SAMPLE_QUESTIONS)}] Q: {question[:60]}")
         print(f"       A: {str(answer)[:100]}\n")
 
-    print(f"\n✅ {len(SAMPLE_QUESTIONS)} traces đã gửi lên LangSmith project '{config.LANGSMITH_PROJECT}'")
-    print("   Mở https://smith.langchain.com để xem traces.")
+    print(f"\n✅ Đã chạy {len(SAMPLE_QUESTIONS)} câu hỏi (tracing: LANGCHAIN_TRACING_V2={os.environ['LANGCHAIN_TRACING_V2']})")
+    print(f"   Mở https://smith.langchain.com → project '{config.LANGSMITH_PROJECT}' và XÁC NHẬN đủ ≥ 50 traces.")
+    print("   Không thấy traces? Kiểm tra LANGCHAIN_API_KEY và LANGCHAIN_TRACING_V2=true trong .env.")
 
 
 if __name__ == "__main__":

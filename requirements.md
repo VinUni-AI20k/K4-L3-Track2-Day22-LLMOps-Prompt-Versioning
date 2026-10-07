@@ -15,7 +15,7 @@ pip install -r requirements.txt
 langchain>=0.3.0
 langchain-core>=0.3.0
 langchain-openai>=0.3.0
-langchain-community>=0.3.0
+langchain-community>=0.3.0,<0.4
 langchain-text-splitters>=0.3.0
 langsmith>=0.2.0
 openai>=1.0.0
@@ -58,6 +58,9 @@ numpy>=1.25.0
 - `Guard.use()` nhận **instance** của validator, không nhận class
 - `Guard.validate(text)` là hàm gọi chính
 - Với `OnFailAction.FIX`, validator phải trả về `FailResult(error_message=..., fix_value=...)` — Guardrails thay output bằng `fix_value`. `PassResult(value_override=...)` **không** thay đổi output
+
+### langchain-community
+- Phải giữ `langchain-community<0.4`: bản 0.4 bỏ module `chat_models.vertexai` nên `import ragas` (0.4.x) báo `ModuleNotFoundError`
 
 ### LangChain 0.3.x
 - Dùng `ChatOpenAI(api_key=..., base_url=..., model=...)` cho endpoint tùy chỉnh

@@ -36,7 +36,9 @@ PROMPT_V2_NAME = "my-rag-prompt-v2"   # ví dụ: "nguyen-rag-v2"
 # ── 2. Định nghĩa 2 Prompt Templates ──────────────────────────────────────
 # TODO: Viết SYSTEM_V1 — phong cách ngắn gọn, trả lời 2-4 câu
 # Gợi ý: "Bạn là trợ lý AI hữu ích. Chỉ dùng context sau để trả lời.
-#          Giữ câu trả lời ngắn gọn (2-4 câu). ..."
+#          Giữ câu trả lời ngắn gọn (2-4 câu). ...\n\nContext:\n{context}"
+# ⚠️ BẮT BUỘC kết thúc bằng "\n\nContext:\n{context}" — thiếu {context} thì LLM không nhận tài liệu
+#    mà chương trình vẫn chạy bình thường (faithfulness ở Bước 3 sẽ tụt).
 SYSTEM_V1 = ...
 
 PROMPT_V1 = ChatPromptTemplate.from_messages([
@@ -46,7 +48,9 @@ PROMPT_V1 = ChatPromptTemplate.from_messages([
 
 # TODO: Viết SYSTEM_V2 — phong cách có cấu trúc, expert tone, 3-5 câu
 # Gợi ý: "Bạn là chuyên gia AI. Đọc kỹ context, xác định facts liên quan,
-#          viết câu trả lời rõ ràng và có tổ chức (3-5 câu). ..."
+#          viết câu trả lời rõ ràng và có tổ chức (3-5 câu). ...\n\nContext:\n{context}"
+# ⚠️ BẮT BUỘC kết thúc bằng "\n\nContext:\n{context}" — thiếu {context} thì LLM không nhận tài liệu
+#    mà chương trình vẫn chạy bình thường (faithfulness ở Bước 3 sẽ tụt).
 SYSTEM_V2 = ...
 
 PROMPT_V2 = ChatPromptTemplate.from_messages([
@@ -66,14 +70,20 @@ def push_prompts_to_hub(client: Client):
         url = ...   # client.push_prompt(PROMPT_V1_NAME, object=PROMPT_V1, description="V1 – ngắn gọn")
         print(f"✅ Đã push V1 → {url}")
     except Exception as e:
-        print(f"⚠️  V1 lỗi: {e}")
+        if "Nothing to commit" in str(e):   # 409: prompt không đổi → Hub giữ phiên bản cũ
+            print(f"ℹ️  V1 không thay đổi so với Hub — giữ phiên bản hiện có")
+        else:
+            print(f"⚠️  V1 lỗi: {e}")
 
     # TODO: Push PROMPT_V2 — bọc trong try/except
     try:
         url = ...   # client.push_prompt(PROMPT_V2_NAME, object=PROMPT_V2, description="V2 – có cấu trúc")
         print(f"✅ Đã push V2 → {url}")
     except Exception as e:
-        print(f"⚠️  V2 lỗi: {e}")
+        if "Nothing to commit" in str(e):
+            print(f"ℹ️  V2 không thay đổi so với Hub — giữ phiên bản hiện có")
+        else:
+            print(f"⚠️  V2 lỗi: {e}")
 
 
 # ── 4. Pull Prompts từ Prompt Hub ──────────────────────────────────────────
@@ -92,17 +102,19 @@ def pull_prompts_from_hub(client: Client) -> dict:
     try:
         prompts[PROMPT_V1_NAME] = ...   # client.pull_prompt(PROMPT_V1_NAME)
         print(f"↓ Đã pull '{PROMPT_V1_NAME}' từ Hub")
-    except Exception:
+    except Exception as e:
         prompts[PROMPT_V1_NAME] = PROMPT_V1
-        print(f"ℹ️  Dùng local fallback cho '{PROMPT_V1_NAME}'")
+        print(f"❌ Pull '{PROMPT_V1_NAME}' từ Hub THẤT BẠI ({e}) → dùng prompt local.")
+        print("   Bài sẽ mất điểm tiêu chí 2.2/2.3 — kiểm tra LANGCHAIN_API_KEY rồi chạy lại.")
 
     # TODO: Pull PROMPT_V2_NAME, fallback về PROMPT_V2 nếu lỗi
     try:
         prompts[PROMPT_V2_NAME] = ...   # client.pull_prompt(PROMPT_V2_NAME)
         print(f"↓ Đã pull '{PROMPT_V2_NAME}' từ Hub")
-    except Exception:
+    except Exception as e:
         prompts[PROMPT_V2_NAME] = PROMPT_V2
-        print(f"ℹ️  Dùng local fallback cho '{PROMPT_V2_NAME}'")
+        print(f"❌ Pull '{PROMPT_V2_NAME}' từ Hub THẤT BẠI ({e}) → dùng prompt local.")
+        print("   Bài sẽ mất điểm tiêu chí 2.2/2.3 — kiểm tra LANGCHAIN_API_KEY rồi chạy lại.")
 
     return prompts
 
